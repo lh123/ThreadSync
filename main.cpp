@@ -21,44 +21,44 @@ std::mutex m_alive_count_lock;
 std::condition_variable_any m_con_exit;
 
 int main() {
-    std::thread t([&] {
-        m_alive_count_lock.lock();
+    std::thread t([&] {//消费者
+        m_alive_count_lock.lock();//锁住来安全的完成自加操作
         alive_count++;
         m_alive_count_lock.unlock();
         while (true) {
             mLock.lock();
-            while (ticket <= 0 && is_need_quit == false) {
-                m_con_consumer.wait(mLock);
+            while (ticket <= 0 && is_need_quit == false) {//当前队列为空并且不需要退出
+                m_con_consumer.wait(mLock);//等待队列不为空
             }
-            if (is_need_quit && ticket <= 0) {
-                m_con_producer.notify_all();
+            if (is_need_quit && ticket <= 0) {//只有当队列为空并且需要退出时
+                m_con_producer.notify_all();//唤醒生产者，防止生产者一直等待
                 mLock.unlock();
                 break;
             }
-            ticket--;
+            ticket--;//消费掉一个元素
             std::cout << "Consumer" << ticket << std::endl;
-            m_con_producer.notify_all();
+            m_con_producer.notify_all();//通知生产者可以生产
             mLock.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
-        m_alive_count_lock.lock();
+        m_alive_count_lock.lock();//锁住来安全的完成自减操作
         alive_count--;
-        m_con_exit.notify_all();
+        m_con_exit.notify_all();//通知主线程自己准备退出
         m_alive_count_lock.unlock();
         std::cout << "Consumer Quit" << std::endl;
     });
-    std::thread t1([&] {
-        m_alive_count_lock.lock();
+    std::thread t1([&] {//生产者
+        m_alive_count_lock.lock();//锁住来安全的完成自加操作
         alive_count++;
         m_alive_count_lock.unlock();
         while (true) {
             mLock.lock();
-            while (ticket > MAX_BUFFER && is_need_quit == false) {
+            while (ticket > MAX_BUFFER && is_need_quit == false) {//当前队列满了并且不需要退出那就等待
                 m_con_producer.wait(mLock);
             }
-            if (is_need_quit || total_ticket >= MAX_COUNT) {
-                is_need_quit = true;
-                m_con_consumer.notify_all();
+            if (is_need_quit || total_ticket >= MAX_COUNT) {//需要退出或者达到生产总数
+                is_need_quit = true;//设置退出标志位，方便消费者的退出
+                m_con_consumer.notify_all();//唤醒消费者，防止其一直等待
                 mLock.unlock();
                 break;
             }
@@ -70,21 +70,21 @@ int main() {
             std::cout << "Producer" << ticket << std::endl;
         }
         std::cout << "Producer Quit" << std::endl;
-        m_alive_count_lock.lock();
+        m_alive_count_lock.lock();//锁住来安全的完成自减操作
         alive_count--;
-        m_con_exit.notify_all();
+        m_con_exit.notify_all();//通知主线程自己准备退出
         m_alive_count_lock.unlock();
     });
     t.detach();
     t1.detach();
-    std::cin.get();
-    m_alive_count_lock.lock();
-    is_need_quit = true;
-    while (alive_count != 0) {
+    std::cin.get();//按下任意按键表示需要退出生产者和消费者
+    m_alive_count_lock.lock();//获取锁，来安全的操作alive_count
+    is_need_quit = true;//设置退出标志位
+    while (alive_count != 0) {//仍然有线程在运行
         std::cout << "main wait" << std::endl;
         std::cv_status sta =
-            m_con_exit.wait_for(m_alive_count_lock, std::chrono::seconds(5));
-        if (sta == std::cv_status::timeout) {
+            m_con_exit.wait_for(m_alive_count_lock, std::chrono::seconds(5));//等待子线程退出，（5s超时）
+        if (sta == std::cv_status::timeout) {//超时直接退出
             std::cout << "main time_out" << std::endl;
             break;
         }
