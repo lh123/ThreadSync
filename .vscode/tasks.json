@@ -13,9 +13,6 @@
             "type": "shell",
             "problemMatcher": {
                 "owner": "cpp",
-                "fileLocation": [
-                    "absolute"
-                ],
                 "pattern": {
                     "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
                     "file": 1,
