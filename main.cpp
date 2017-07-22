@@ -3,16 +3,19 @@
 #include <mutex>
 #include <thread>
 
-const int MAX_COUNT = 20;
-const int MAX_BUFFER = 10;
+const int MAX_COUNT = 20;//允许生产的最大数目
+const int MAX_BUFFER = 10;//队列中的最大缓冲数目
 
-int ticket = 0;
-int total_ticket = 0;
-bool is_need_quit = false;
+int ticket = 0;//队列中的数目
+int total_ticket = 0;//已生产的数目
+bool is_need_quit = false;//控制生产者和消费者线程的退出
+
+//队列的同步锁
 std::mutex mLock;
 std::condition_variable_any m_con_consumer;
 std::condition_variable_any m_con_producer;
 
+//控制Main线程的退出
 int alive_count = 0;
 std::mutex m_alive_count_lock;
 std::condition_variable_any m_con_exit;
